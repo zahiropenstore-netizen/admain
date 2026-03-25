@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Desi Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+<style>
+:root {
+  --gold: #F4B400;
+  --gold-light: #FFD54F;
+  --gold-dark: #E65100;
+  --brown: #4E342E;
+  --brown-light: #6D4C41;
+  --cream: #FFF8F0;
+  --cream2: #FFF3E0;
+  --white: #FFFFFF;
+  --text-dark: #1A1208;
+  --text-mid: #4E342E;
+  --text-soft: #8D6E63;
+  --success: #2E7D32;
+  --danger: #C62828;
+  --warning: #E65100;
+  --info: #1565C0;
+  --dispatched: #6A1B9A;
+  --shadow: 0 4px 20px rgba(78,52,46,0.12);
+  --shadow-lg: 0 8px 40px rgba(78,52,46,0.18);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCREENS ─────────────────────────────── */
+.screen { display:none; min-height:100vh; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* ── LOGIN ───────────────────────────────── */
+#loginScreen {
+  background: linear-gradient(160deg, #4E342E 0%, #6D4C41 40%, #F4B400 100%);
+  justify-content: center; align-items: center; padding: 24px;
+}
+.login-card {
+  background: var(--white);
+  border-radius: 28px;
+  padding: 40px 32px;
+  width: 100%; max-width: 420px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp .5s ease;
+}
+.login-logo {
+  text-align: center; margin-bottom: 32px;
+}
+.login-logo .logo-icon {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--gold), var(--brown));
+  display: flex; align-items:center; justify-content:center;
+  margin: 0 auto 12px; font-size: 32px;
+}
+.login-logo h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; color: var(--brown);
+}
+.login-logo p { font-size: 13px; color: var(--text-soft); margin-top: 4px; }
+
+.form-group { margin-bottom: 18px; }
+.form-group label { display:block; font-size:13px; font-weight:600; color:var(--text-mid); margin-bottom:6px; }
+.form-group input, .form-group select {
+  width:100%; padding: 14px 16px;
+  border: 2px solid #E8D5C0; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 15px;
+  background: var(--cream); color: var(--text-dark);
+  outline:none; transition: border-color .2s;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+
+.btn-primary {
+  width:100%; padding: 16px;
+  background: linear-gradient(135deg, var(--gold), #E65100);
+  color: var(--white); border:none; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight:600;
+  cursor:pointer; transition: all .2s; box-shadow: 0 4px 15px rgba(244,180,0,.4);
+}
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled { opacity: .6; }
+
+/* ── APP SHELL ───────────────────────────── */
+#appShell { background: var(--cream); }
+
+.top-bar {
+  background: linear-gradient(135deg, var(--brown) 0%, var(--brown-light) 100%);
+  padding: 16px 20px 14px;
+  display:flex; align-items:center; justify-content:space-between;
+  position: sticky; top:0; z-index:100;
+  box-shadow: 0 2px 12px rgba(78,52,46,.3);
+}
+.top-bar-title { color:var(--white); font-family:'Playfair Display',serif; font-size:18px; }
+.top-bar-sub { color: rgba(255,255,255,.7); font-size: 12px; margin-top:1px; }
+.top-bar-right { display:flex; gap:10px; align-items:center; }
+.icon-btn {
+  width:38px; height:38px; border-radius:10px;
+  background:rgba(255,255,255,.15); border:none;
+  color:var(--white); font-size:18px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition: background .2s;
+}
+.icon-btn:active { background:rgba(255,255,255,.25); }
+
+.main-content { flex:1; overflow-y:auto; padding-bottom:80px; }
+
+/* ── BOTTOM NAV ──────────────────────────── */
+.bottom-nav {
+  position: fixed; bottom:0; left:0; right:0;
+  background: var(--white);
+  display:flex; border-top: 1px solid #E8D5C0;
+  box-shadow: 0 -4px 20px rgba(78,52,46,.1);
+  z-index:100;
+}
+.nav-item {
+  flex:1; padding: 10px 0 12px;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  cursor:pointer; border:none; background:transparent;
+  font-family:'DM Sans',sans-serif; font-size:10px; color:var(--text-soft);
+  transition: color .2s; position:relative;
+}
+.nav-item.active { color: var(--gold); }
+.nav-item .nav-icon { font-size:22px; }
+.nav-badge {
+  position:absolute; top:6px; right:calc(50% - 18px);
+  background:var(--danger); color:var(--white);
+  font-size:9px; font-weight:700; min-width:16px; height:16px;
+  border-radius:8px; display:flex; align-items:center; justify-content:center;
+  padding: 0 4px;
+}
+
+/* ── PAGES ───────────────────────────────── */
+.page { display:none; }
+.page.active { display:block; }
+
+/* ── DASHBOARD ───────────────────────────── */
+.section-header {
+  padding: 20px 20px 12px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.section-title { font-family:'Playfair Display',serif; font-size:20px; color:var(--brown); }
+.section-sub { font-size:12px; color:var(--text-soft); margin-top:2px; }
+
+.stats-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; padding: 0 16px 8px;
+}
+.stat-card {
+  background:var(--white); border-radius:var(--radius);
+  padding:18px 16px; box-shadow:var(--shadow);
+  position:relative; overflow:hidden;
+  animation: fadeIn .4s ease both;
+}
+.stat-card::before {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:80px; height:80px; border-radius:50%;
+  opacity:.08;
+}
+.stat-card.gold::before { background:var(--gold); }
+.stat-card.brown::before { background:var(--brown); }
+.stat-card.green::before { background:#2E7D32; }
+.stat-card.blue::before { background:#1565C0; }
+
+.stat-icon { font-size:28px; margin-bottom:8px; }
+.stat-value { font-family:'Playfair Display',serif; font-size:26px; color:var(--brown); font-weight:700; }
+.stat-label { font-size:11px; color:var(--text-soft); margin-top:3px; font-weight:500; }
+
+.quick-actions { padding: 0 16px 16px; }
+.qa-title { font-size:13px; font-weight:600; color:var(--text-soft); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px; }
+.qa-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.qa-btn {
+  background:var(--white); border-radius:var(--radius-sm); padding:14px 8px;
+  text-align:center; cursor:pointer; border:none;
+  box-shadow:var(--shadow); transition: all .2s;
+  font-family:'DM Sans',sans-serif;
+}
+.qa-btn:active { transform: scale(.96); }
+.qa-btn .qa-icon { font-size:22px; display:block; margin-bottom:4px; }
+.qa-btn .qa-label { font-size:10px; color:var(--text-mid); font-weight:600; }
+
+/* ── ORDER CARDS ─────────────────────────── */
+.orders-list { padding: 0 16px; display:flex; flex-direction:column; gap:12px; }
+
+.order-card {
+  background:var(--white); border-radius:var(--radius);
+  padding:18px; box-shadow:var(--shadow);
+  animation: slideUp .3s ease both;
+  border-left: 4px solid transparent;
+}
+.order-card.pending { border-left-color: var(--gold); }
+.order-card.accepted { border-left-color: var(--success); }
+.order-card.rejected { border-left-color: var(--danger); }
+.order-card.dispatched { border-left-color: var(--dispatched); }
+.order-card.delivered { border-left-color: var(--info); }
+
+.order-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.order-id { font-size:11px; color:var(--text-soft); font-weight:600; }
+.status-badge {
+  font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.status-badge.pending { background:#FFF3E0; color:#E65100; }
+.status-badge.accepted { background:#E8F5E9; color:#2E7D32; }
+.status-badge.rejected { background:#FFEBEE; color:#C62828; }
+.status-badge.dispatched { background:#F3E5F5; color:#6A1B9A; }
+.status-badge.delivered { background:#E3F2FD; color:#1565C0; }
+
+.order-customer { font-size:16px; font-weight:600; color:var(--text-dark); margin-bottom:4px; }
+.order-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.order-meta span {
+  font-size:12px; color:var(--text-soft);
+  display:flex; align-items:center; gap:3px;
+}
+.order-product { 
+  background:var(--cream); border-radius:8px; padding:10px 12px;
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:12px;
+}
+.order-product-name { font-size:13px; font-weight:600; color:var(--text-dark); }
+.order-product-qty { font-size:12px; color:var(--text-soft); }
+.order-amount { font-size:18px; font-weight:700; color:var(--brown); }
+
+.order-actions { display:flex; gap:8px; }
+.btn-accept {
+  flex:1; padding:11px; border:none; border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,#2E7D32,#43A047);
+  color:var(--white); font-family:'DM Sans',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+}
+.btn-reject {
+  flex:1; padding:11px; border:none; border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,#C62828,#E53935);
+  color:var(--white); font-family:'DM Sans',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+}
+.btn-accept:active, .btn-reject:active { transform:scale(.97); }
+
+.btn-dispatch {
+  flex:1; padding:11px; border:none; border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,#6A1B9A,#8E24AA);
+  color:var(--white); font-family:'DM Sans',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+}
+
+/* ── FILTER TABS ─────────────────────────── */
+.filter-tabs {
+  display:flex; gap:8px; padding:16px 16px 8px;
+  overflow-x:auto; scrollbar-width:none;
+}
+.filter-tabs::-webkit-scrollbar { display:none; }
+.filter-tab {
+  padding:8px 16px; border-radius:20px; border:none;
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600;
+  cursor:pointer; white-space:nowrap; transition:all .2s;
+  background:var(--white); color:var(--text-soft);
+  box-shadow:var(--shadow);
+}
+.filter-tab.active { background:var(--gold); color:var(--white); }
+
+/* ── DISPATCH MODAL ──────────────────────── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.5);
+  z-index:200; display:none; align-items:flex-end;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.open { display:flex; }
+.modal-sheet {
+  background:var(--white); border-radius:28px 28px 0 0;
+  padding:28px 24px 40px; width:100%; max-width:600px; margin:0 auto;
+  animation: slideUp .3s ease;
+}
+.modal-handle { width:36px; height:4px; background:#E0D5C0; border-radius:2px; margin:0 auto 20px; }
+.modal-title { font-family:'Playfair Display',serif; font-size:20px; color:var(--brown); margin-bottom:20px; }
+
+/* ── RESELLERS PAGE ──────────────────────── */
+.reseller-card {
+  background:var(--white); border-radius:var(--radius); padding:18px;
+  box-shadow:var(--shadow); margin:0 16px 12px;
+  display:flex; gap:14px; align-items:center;
+}
+.reseller-avatar {
+  width:52px; height:52px; border-radius:14px; flex-shrink:0;
+  background:linear-gradient(135deg,var(--gold),var(--brown));
+  display:flex; align-items:center; justify-content:center;
+  color:var(--white); font-size:20px; font-weight:700;
+}
+.reseller-info { flex:1; min-width:0; }
+.reseller-name { font-size:16px; font-weight:600; color:var(--text-dark); }
+.reseller-phone { font-size:12px; color:var(--text-soft); margin-top:2px; }
+.reseller-stats { display:flex; gap:16px; margin-top:8px; }
+.reseller-stat { font-size:11px; color:var(--text-soft); }
+.reseller-stat strong { color:var(--brown); font-size:14px; display:block; }
+.rank-badge {
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:700;
+}
+.rank-1 { background:#FFD700; color:#5D4037; }
+.rank-2 { background:#C0C0C0; color:#37474F; }
+.rank-3 { background:#CD7F32; color:#3E2723; }
+.rank-other { background:var(--cream2); color:var(--text-soft); font-size:11px; }
+
+/* ── PRODUCTS PAGE ───────────────────────── */
+.product-card {
+  background:var(--white); border-radius:var(--radius); padding:18px;
+  box-shadow:var(--shadow); margin:0 16px 12px;
+  display:flex; gap:14px;
+}
+.product-img {
+  width:70px; height:70px; border-radius:12px; flex-shrink:0;
+  background:linear-gradient(135deg,var(--cream2),var(--gold-light));
+  display:flex; align-items:center; justify-content:center; font-size:30px;
+  object-fit:cover;
+}
+.product-info { flex:1; min-width:0; }
+.product-name { font-size:15px; font-weight:600; color:var(--text-dark); margin-bottom:4px; }
+.product-prices { display:flex; gap:12px; margin-bottom:6px; flex-wrap:wrap; }
+.price-retail { font-size:12px; color:var(--text-soft); }
+.price-reseller { font-size:14px; font-weight:700; color:var(--brown); }
+.profit-badge {
+  background:#E8F5E9; color:#2E7D32;
+  font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;
+  display:inline-block;
+}
+.stock-badge {
+  font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;
+  display:inline-block;
+}
+.in-stock { background:#E8F5E9; color:#2E7D32; }
+.out-stock { background:#FFEBEE; color:#C62828; }
+
+/* ── FAB ─────────────────────────────────── */
+.fab {
+  position:fixed; bottom:90px; right:20px;
+  width:56px; height:56px; border-radius:18px;
+  background:linear-gradient(135deg,var(--gold),#E65100);
+  border:none; color:var(--white); font-size:26px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow: 0 6px 20px rgba(244,180,0,.5);
+  transition:all .2s; z-index:50;
+}
+.fab:active { transform:scale(.92); }
+
+/* ── EMPTY STATE ─────────────────────────── */
+.empty-state {
+  text-align:center; padding:60px 32px;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.empty-icon { font-size:64px; opacity:.4; }
+.empty-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--text-mid); }
+.empty-sub { font-size:13px; color:var(--text-soft); }
+
+/* ── SEARCH BAR ──────────────────────────── */
+.search-bar {
+  margin: 16px 16px 4px;
+  background:var(--white); border-radius:var(--radius-sm);
+  display:flex; align-items:center; gap:10px; padding:12px 16px;
+  box-shadow:var(--shadow);
+}
+.search-bar input {
+  border:none; background:transparent; flex:1;
+  font-family:'DM Sans',sans-serif; font-size:14px; color:var(--text-dark);
+  outline:none;
+}
+.search-bar .search-icon { font-size:18px; color:var(--text-soft); }
+
+/* ── ADD PRODUCT FORM ────────────────────── */
+.form-card {
+  background:var(--white); border-radius:var(--radius);
+  margin:16px; padding:20px; box-shadow:var(--shadow);
+}
+
+/* ── TRACKING TIMELINE ───────────────────── */
+.tracking-card {
+  background:var(--white); border-radius:var(--radius);
+  margin:16px; padding:20px; box-shadow:var(--shadow);
+}
+.tracking-input { display:flex; gap:8px; margin-bottom:20px; }
+.tracking-input input {
+  flex:1; padding:12px 14px; border:2px solid #E8D5C0;
+  border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif;
+  font-size:14px; outline:none;
+}
+.tracking-input input:focus { border-color:var(--gold); }
+.btn-track {
+  padding:12px 20px; background:linear-gradient(135deg,var(--gold),#E65100);
+  color:var(--white); border:none; border-radius:var(--radius-sm);
+  font-family:'DM Sans',sans-serif; font-weight:600; cursor:pointer;
+}
+
+.timeline { position:relative; padding-left:24px; }
+.timeline::before {
+  content:''; position:absolute; left:8px; top:0; bottom:0;
+  width:2px; background:#E8D5C0;
+}
+.timeline-item { position:relative; margin-bottom:20px; }
+.timeline-dot {
+  width:18px; height:18px; border-radius:50%;
+  background:#E8D5C0; border:3px solid var(--white);
+  position:absolute; left:-33px; top:2px;
+  transition:all .3s;
+}
+.timeline-item.done .timeline-dot { background:var(--success); }
+.timeline-item.current .timeline-dot { background:var(--gold); box-shadow:0 0 0 4px rgba(244,180,0,.2); }
+.timeline-status { font-size:14px; font-weight:600; color:var(--text-dark); }
+.timeline-time { font-size:11px; color:var(--text-soft); margin-top:2px; }
+.timeline-location { font-size:12px; color:var(--text-mid); margin-top:3px; }
+
+/* ── LOADING SKELETON ────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f0e8df 25%, #e8ddd5 50%, #f0e8df 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.skeleton-card {
+  background:var(--white); border-radius:var(--radius);
+  padding:18px; margin:0 16px 12px; box-shadow:var(--shadow);
+}
+.sk-line { height:14px; margin-bottom:8px; }
+.sk-line.short { width:60%; }
+.sk-line.medium { width:80%; }
+
+/* ── TOAST ───────────────────────────────── */
+.toast {
+  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px);
+  background:var(--brown); color:var(--white); padding:12px 24px;
+  border-radius:30px; font-size:13px; font-weight:600;
+  z-index:999; transition:transform .3s ease; white-space:nowrap;
+  box-shadow:var(--shadow-lg);
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--success); }
+.toast.error { background:var(--danger); }
+
+/* ── COD RISK ────────────────────────────── */
+.cod-risk { background:#FFF3E0; color:#E65100; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; }
+
+/* ── ANIMATIONS ──────────────────────────── */
+@keyframes slideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* ── DARK MODE ───────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream: #1A1208; --cream2: #231708; --white: #2D1F13;
+    --text-dark: #F5E6D0; --text-mid: #D4A96A; --text-soft: #8D7060;
+    --shadow: 0 4px 20px rgba(0,0,0,.4); --shadow-lg: 0 8px 40px rgba(0,0,0,.5);
+  }
+  .form-group input, .form-group select { border-color:#5D4037; color:#F5E6D0; }
+  .search-bar input { color:#F5E6D0; }
+  .tracking-input input { border-color:#5D4037; color:#F5E6D0; background:#2D1F13; }
+  .filter-tab { background:#2D1F13; }
+}
+
+/* ── SCROLLBAR ───────────────────────────── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--gold-light); border-radius:2px; }
+
+
+/* ── ADDRESS COPY BOX ────────────────────── */
+.address-box {
+  background:#F3E5F5; border-radius:8px; padding:10px 12px;
+  margin-bottom:10px; display:flex; align-items:flex-start; gap:8px;
+}
+.address-text { flex:1; font-size:12px; color:#4A148C; line-height:1.5; font-weight:500; }
+.copy-btn {
+  background:#6A1B9A; color:var(--white); border:none;
+  border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700;
+  cursor:pointer; white-space:nowrap; flex-shrink:0;
+}
+.copy-btn:active { opacity:.8; }
+
+/* ── ORDER ACTION BUTTONS ────────────────── */
+.order-tools {
+  display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;
+  padding-top:10px; border-top:1px solid #F0E8E0;
+}
+.tool-btn {
+  flex:1; min-width:calc(33% - 6px); padding:9px 6px;
+  border:none; border-radius:8px; font-family:'DM Sans',sans-serif;
+  font-size:11px; font-weight:600; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; justify-content:center; gap:4px;
+}
+.tool-btn:active { transform:scale(.96); }
+.btn-invoice { background:#E3F2FD; color:#1565C0; }
+.btn-whatsapp { background:#E8F5E9; color:#1B5E20; }
+.btn-sheet { background:#E8F5E9; color:#2E7D32; }
+
+/* ── ADD RESELLER MODAL ──────────────────── */
+.add-reseller-fab {
+  position:fixed; bottom:90px; right:20px;
+  background:linear-gradient(135deg,var(--gold),#E65100);
+  color:var(--white); width:56px; height:56px;
+  border-radius:18px; border:none; font-size:26px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 6px 20px rgba(244,180,0,.5);
+  z-index:50; transition:all .2s;
+}
+
+
+/* ── RESELLER REMOVE BTN ─────────────────── */
+.btn-remove-reseller {
+  background:#FFEBEE; color:#C62828; border:none;
+  border-radius:8px; padding:8px 14px; font-family:'DM Sans',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer; transition:all .2s;
+}
+.btn-remove-reseller:active { transform:scale(.96); }
+
+/* ── SHIPPING LABEL ──────────────────────── */
+.btn-shipping { background:#E8EAF6; color:#1A237E; }
+
+/* ── PAYMENT BADGE ───────────────────────── */
+.pay-badge-paid { background:#E8F5E9; color:#2E7D32; font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; }
+.pay-badge-due { background:#FFF3E0; color:#E65100; font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; }
+
+.cod-flag { 
+  display:inline-flex; align-items:center; gap:4px;
+  background:#FFF3E0; color:#E65100; font-size:10px; font-weight:700;
+  padding:2px 7px; border-radius:6px; margin-left:6px;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">🏪</div>
+      <h1>Desi Admin Panel</h1>
+      <p>Reseller Management System</p>
+    </div>
+    <div class="form-group">
+      <label>Admin Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@desistore.pk" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" />
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">🔐 Login to Admin Panel</button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-soft)">
+      Desi Products Reseller System v1.0
+    </p>
+  </div>
+</div>
+
+<!-- ═══ APP SHELL ═══ -->
+<div id="appShell" class="screen">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-title">🏪 Desi Admin</div>
+      <div class="top-bar-sub" id="topBarSub">Dashboard</div>
+    </div>
+    <div class="top-bar-right">
+      <button class="icon-btn" onclick="toggleDarkMode()" title="Dark Mode">🌙</button>
+      <button class="icon-btn" onclick="doLogout()" title="Logout">🚪</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- DASHBOARD PAGE -->
+    <div id="pageDashboard" class="page active">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Dashboard</div>
+          <div class="section-sub" id="dashDate"></div>
+        </div>
+        <button onclick="loadDashboard()" class="icon-btn" style="background:var(--cream2);color:var(--brown)">🔄</button>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card gold">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value" id="statToday">—</div>
+          <div class="stat-label">آج کے آرڈر</div>
+        </div>
+        <div class="stat-card brown">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-value" id="statPending">—</div>
+          <div class="stat-label">Pending Orders</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="statSales">—</div>
+          <div class="stat-label">Total Sales (Rs)</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="statResellers">—</div>
+          <div class="stat-label">Active Resellers</div>
+        </div>
+      </div>
+
+      <div class="quick-actions" style="padding:16px 16px 8px">
+        <div class="qa-title">Quick Actions</div>
+        <div class="qa-grid">
+          <button class="qa-btn" onclick="showPage('orders')">
+            <span class="qa-icon">📋</span>
+            <span class="qa-label">New Orders</span>
+          </button>
+          <button class="qa-btn" onclick="showPage('dispatch')">
+            <span class="qa-icon">🚚</span>
+            <span class="qa-label">Dispatch</span>
+          </button>
+          <button class="qa-btn" onclick="showPage('products')">
+            <span class="qa-icon">➕</span>
+            <span class="qa-label">Add Product</span>
+          </button>
+          <button class="qa-btn" onclick="downloadAllOrdersCSV()">
+            <span class="qa-icon">📊</span>
+            <span class="qa-label">All Orders CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section-header" style="padding-top:8px">
+        <div class="section-title" style="font-size:16px">Recent Pending Orders</div>
+      </div>
+      <div id="dashRecentOrders"></div>
+    </div>
+
+    <!-- ORDERS PAGE -->
+    <div id="pageOrders" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Orders</div>
+          <div class="section-sub">Manage all reseller orders</div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="orderSearch" placeholder="Search by customer, city..." oninput="filterOrders()">
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setOrderFilter('all', this)">All</button>
+        <button class="filter-tab" onclick="setOrderFilter('pending', this)">⏳ Pending</button>
+        <button class="filter-tab" onclick="setOrderFilter('accepted', this)">✅ Accepted</button>
+        <button class="filter-tab" onclick="setOrderFilter('dispatched', this)">🚚 Dispatched</button>
+        <button class="filter-tab" onclick="setOrderFilter('delivered', this)">📬 Delivered</button>
+        <button class="filter-tab" onclick="setOrderFilter('rejected', this)">❌ Rejected</button>
+      </div>
+      <div class="orders-list" id="ordersList"></div>
+      <div id="ordersEmpty" class="empty-state" style="display:none">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No Orders Found</div>
+        <div class="empty-sub">Orders will appear here when resellers place them</div>
+      </div>
+    </div>
+
+    <!-- DISPATCH PAGE -->
+    <div id="pageDispatch" class="page">
+      <div class="section-header">
+        <div class="section-title">Dispatch Orders</div>
+        <div class="section-sub">Enter courier details</div>
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setDispatchFilter('accepted', this)">✅ Ready to Dispatch</button>
+        <button class="filter-tab" onclick="setDispatchFilter('dispatched', this)">🚚 Dispatched</button>
+      </div>
+      <div class="orders-list" id="dispatchList"></div>
+      <div id="dispatchEmpty" class="empty-state" style="display:none">
+        <div class="empty-icon">🚚</div>
+        <div class="empty-title">No Orders to Dispatch</div>
+        <div class="empty-sub">Accept orders first to dispatch them</div>
+      </div>
+    </div>
+
+    <!-- TRACKING PAGE -->
+    <div id="pageTracking" class="page">
+      <div class="section-header">
+        <div class="section-title">Live Tracking</div>
+        <div class="section-sub">Track courier shipments</div>
+      </div>
+      <div class="tracking-card">
+        <div class="tracking-input">
+          <input type="text" id="trackingInput" placeholder="Enter tracking number...">
+          <button class="btn-track" onclick="trackOrder()">Track</button>
+        </div>
+        <div id="trackingResult"></div>
+      </div>
+      <div style="padding:0 16px">
+        <div class="section-title" style="font-size:16px;margin-bottom:12px">Dispatched Orders</div>
+        <div id="dispatchedForTracking"></div>
+      </div>
+    </div>
+
+    <!-- RESELLERS PAGE -->
+    <div id="pageResellers" class="page">
+      <div class="section-header">
+        <div class="section-title">🏆 Resellers</div>
+        <div class="section-sub">Leaderboard & management</div>
+      </div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="resellerSearch" placeholder="Search reseller..." oninput="filterResellers()">
+      </div>
+      <div id="resellerList"></div>
+      <div id="resellerEmpty" class="empty-state" style="display:none">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">No Resellers Yet</div>
+        <div class="empty-sub">Resellers will appear after they sign up</div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS PAGE -->
+    <div id="pageProducts" class="page">
+      <div class="section-header">
+        <div class="section-title">Products</div>
+        <div class="section-sub">Manage your product catalog</div>
+      </div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="productSearch" placeholder="Search products..." oninput="filterProducts()">
+      </div>
+      <div id="productList"></div>
+    </div>
+
+  </div><!-- end main-content -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <span class="nav-icon">📊</span>Dashboard
+    </button>
+    <button class="nav-item" onclick="showPage('orders')" id="nav-orders">
+      <span class="nav-icon">📋</span>Orders
+      <span class="nav-badge" id="pendingBadge" style="display:none">0</span>
+    </button>
+    <button class="nav-item" onclick="showPage('dispatch')" id="nav-dispatch">
+      <span class="nav-icon">🚚</span>Dispatch
+    </button>
+    <button class="nav-item" onclick="showPage('tracking')" id="nav-tracking">
+      <span class="nav-icon">📡</span>Tracking
+    </button>
+    <button class="nav-item" onclick="showPage('resellers')" id="nav-resellers">
+      <span class="nav-icon">👥</span>Resellers
+    </button>
+  </div>
+
+</div><!-- end appShell -->
+
+<!-- FAB - Add Product -->
+<button class="fab" id="fabBtn" style="display:none" onclick="openAddProduct()">＋</button>
+
+<!-- DISPATCH MODAL -->
+<div class="modal-overlay" id="dispatchModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🚚 Dispatch Order</div>
+    <input type="hidden" id="dispatchOrderId">
+    <input type="hidden" id="dispatchFcmToken">
+    <div class="form-group">
+      <label>Courier Company</label>
+      <select id="courierSelect">
+        <option value="">Select courier...</option>
+        <option>TCS</option>
+        <option>Leopards</option>
+        <option>Daewoo</option>
+        <option>M&P</option>
+        <option>BlueEX</option>
+        <option>Pakistan Post</option>
+        <option>FedEx</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tracking Number</label>
+      <input type="text" id="trackingNumberInput" placeholder="Enter tracking number">
+    </div>
+    <button class="btn-primary" onclick="confirmDispatch()">📤 Dispatch & Notify Reseller</button>
+    <button onclick="closeModal()" style="width:100%;margin-top:10px;padding:12px;border:none;background:transparent;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- ADD PRODUCT MODAL -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title">➕ Add New Product</div>
+    <div class="form-group">
+      <label>Product Name (اردو / English)</label>
+      <input type="text" id="pName" placeholder="e.g. Desi Ghee 1KG">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <input type="text" id="pDesc" placeholder="Product description">
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="pCategory">
+        <option>Desi Ghee</option>
+        <option>Honey</option>
+        <option>Dry Fruits</option>
+        <option>Spices</option>
+        <option>Pickles</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Retail Price (Rs)</label>
+      <input type="number" id="pRetail" placeholder="Customer price">
+    </div>
+    <div class="form-group">
+      <label>Reseller Price (Rs)</label>
+      <input type="number" id="pReseller" placeholder="Reseller buys at">
+    </div>
+    <div class="form-group">
+      <label>Stock Quantity</label>
+      <input type="number" id="pStock" placeholder="Available units">
+    </div>
+    <div class="form-group">
+      <label>Image URL (optional)</label>
+      <input type="text" id="pImage" placeholder="https://...">
+    </div>
+    <button class="btn-primary" onclick="saveProduct()">💾 Save Product</button>
+    <button onclick="closeProductModal()" style="width:100%;margin-top:10px;padding:12px;border:none;background:transparent;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- REJECT REASON MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">❌ Reject Order</div>
+    <div class="form-group">
+      <label>Reason (optional)</label>
+      <input type="text" id="rejectReason" placeholder="Out of stock, invalid address...">
+    </div>
+    <input type="hidden" id="rejectOrderId">
+    <input type="hidden" id="rejectFcmToken">
+    <button class="btn-primary" style="background:linear-gradient(135deg,#C62828,#E53935)" onclick="confirmReject()">Confirm Reject</button>
+    <button onclick="document.getElementById('rejectModal').classList.remove('open')" style="width:100%;margin-top:10px;padding:12px;border:none;background:transparent;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+
+<!-- ADD RESELLER MODAL -->
+<div class="modal-overlay" id="addResellerModal">
+  <div class="modal-sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👤 Add New Reseller</div>
+    <div class="form-group">
+      <label>Full Name *</label>
+      <input type="text" id="rName" placeholder="Muhammad Ali">
+    </div>
+    <div class="form-group">
+      <label>Phone Number *</label>
+      <input type="tel" id="rPhone" placeholder="03XX-XXXXXXX">
+    </div>
+    <div class="form-group">
+      <label>City *</label>
+      <select id="rCity">
+        <option value="">Select City...</option>
+        <option>Karachi</option><option>Lahore</option><option>Islamabad</option>
+        <option>Rawalpindi</option><option>Faisalabad</option><option>Multan</option>
+        <option>Peshawar</option><option>Quetta</option><option>Sialkot</option>
+        <option>Hyderabad</option><option>Bahawalpur</option><option>Rahim Yar Khan</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Password *</label>
+      <input type="password" id="rPassword" placeholder="Min 6 characters">
+    </div>
+    <button class="btn-primary" onclick="saveReseller()">✅ Create Reseller Account</button>
+    <button onclick="document.getElementById('addResellerModal').classList.remove('open')" style="width:100%;margin-top:10px;padding:12px;border:none;background:transparent;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- ADD RESELLER FAB (shown on resellers page) -->
+<button class="add-reseller-fab" id="addResellerFab" style="display:none" onclick="document.getElementById('addResellerModal').classList.add('open')">＋</button>
+
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ FIREBASE CONFIG ═══
+const firebaseConfig = {
+  apiKey: "AIzaSyCF8jcgnhnbpRwTA1-mvEA48ZFu-lo0W2k",
+  authDomain: "al-tohoheed.firebaseapp.com",
+  projectId: "al-tohoheed",
+  storageBucket: "al-tohoheed.firebasestorage.app",
+  messagingSenderId: "825783979695",
+  appId: "1:825783979695:web:615c2f2a533454a43f8e5a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Enable offline persistence
+db.enablePersistence().catch(() => {});
+
+// ═══ STATE ═══
+let currentPage = 'dashboard';
+let allOrders = [];
+let allResellers = [];
+let allProducts = [];
+let orderFilter = 'all';
+let dispatchFilter = 'accepted';
+
+// ═══ AUTH ═══
+auth.onAuthStateChanged(user => {
+  if (user) {
+    showApp();
+    loadAll();
+  } else {
+    showLogin();
+  }
+});
+
+function showLogin() {
+  document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('appShell').classList.remove('active');
+}
+
+function showApp() {
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('appShell').classList.add('active');
+  document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-PK', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  if (!email || !pw) { showToast('Email اور Password درج کریں', 'error'); return; }
+  btn.disabled = true; btn.textContent = '⌛ Logging in...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+    showToast('Welcome Admin! 👋', 'success');
+  } catch (e) {
+    showToast('Login failed: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '🔐 Login to Admin Panel';
+  }
+}
+
+function doLogout() {
+  if (confirm('Logout کریں؟')) auth.signOut();
+}
+
+// ═══ LOAD ALL DATA ═══
+function loadAll() {
+  listenOrders();
+  listenResellers();
+  listenProducts();
+  loadDashboard();
+}
+
+function listenOrders() {
+  db.collection('orders').onSnapshot(snap => {
+    allOrders = snap.docs.map(d => ({id: d.id, ...d.data()}))
+      .sort((a,b) => {
+        const ta = a.createdAt?.toDate?.()?.getTime() || 0;
+        const tb = b.createdAt?.toDate?.()?.getTime() || 0;
+        return tb - ta;
+      });
+    renderOrders();
+    renderDispatch();
+    updateBadge();
+    renderDashRecent();
+    renderDispatchedForTracking();
+    loadDashboard();
+  }, (err) => {
+    console.log('Orders error:', err);
+    showToast('Data load error: ' + err.message, 'error');
+  });
+}
+
+function listenResellers() {
+  db.collection('users').where('role','==','reseller').onSnapshot(snap => {
+    allResellers = snap.docs.map(d => ({id: d.id, ...d.data()}))
+      .sort((a,b) => {
+        // Active first, then by orders
+        if ((a.isActive===false) !== (b.isActive===false)) return a.isActive===false ? 1 : -1;
+        return (b.totalOrders||0) - (a.totalOrders||0);
+      });
+    renderResellers();
+  }, (err) => { console.log('Resellers error:', err); });
+}
+
+function listenProducts() {
+  db.collection('products').onSnapshot(snap => {
+    allProducts = snap.docs.map(d => ({id: d.id, ...d.data()}))
+      .sort((a,b) => {
+        const ta = a.createdAt?.toDate?.()?.getTime() || 0;
+        const tb = b.createdAt?.toDate?.()?.getTime() || 0;
+        return tb - ta;
+      });
+    renderProducts();
+  }, (err) => { console.log('Products error:', err); });
+}
+
+// ═══ DASHBOARD ═══
+async function loadDashboard() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayOrders = allOrders.filter(o => o.createdAt?.toDate?.() >= today).length;
+  const pending = allOrders.filter(o => o.status === 'pending').length;
+  const totalSales = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + (o.totalAmount||0), 0);
+  const activeResellers = allResellers.filter(r => r.isActive !== false).length;
+
+  animateNum('statToday', todayOrders);
+  animateNum('statPending', pending);
+  document.getElementById('statSales').textContent = formatMoney(totalSales);
+  animateNum('statResellers', activeResellers);
+}
+
+function animateNum(id, target) {
+  const el = document.getElementById(id);
+  let n = 0; const step = Math.ceil(target/20);
+  const interval = setInterval(() => {
+    n = Math.min(n + step, target);
+    el.textContent = n;
+    if (n >= target) clearInterval(interval);
+  }, 40);
+}
+
+function renderDashRecent() {
+  const pending = allOrders.filter(o => o.status === 'pending').slice(0, 3);
+  const container = document.getElementById('dashRecentOrders');
+  if (pending.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No Pending Orders</div></div>';
+    return;
+  }
+  container.innerHTML = '<div class="orders-list">' + pending.map(o => orderCardHTML(o, true)).join('') + '</div>';
+}
+
+function updateBadge() {
+  const count = allOrders.filter(o => o.status === 'pending').length;
+  const badge = document.getElementById('pendingBadge');
+  badge.style.display = count > 0 ? 'flex' : 'none';
+  badge.textContent = count;
+}
+
+// ═══ ORDERS ═══
+function setOrderFilter(f, el) {
+  orderFilter = f;
+  document.querySelectorAll('.filter-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderOrders();
+}
+
+function filterOrders() { renderOrders(); }
+
+function renderOrders() {
+  const q = document.getElementById('orderSearch')?.value.toLowerCase() || '';
+  let orders = orderFilter === 'all' ? allOrders : allOrders.filter(o => o.status === orderFilter);
+  if (q) orders = orders.filter(o =>
+    (o.customerName||'').toLowerCase().includes(q) ||
+    (o.city||'').toLowerCase().includes(q) ||
+    (o.resellerName||'').toLowerCase().includes(q) ||
+    (o.productName||'').toLowerCase().includes(q)
+  );
+  const list = document.getElementById('ordersList');
+  const empty = document.getElementById('ordersEmpty');
+  if (orders.length === 0) {
+    list.innerHTML = ''; empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = orders.map(o => orderCardHTML(o, true)).join('');
+  }
+}
+
+function orderCardHTML(o, showActions) {
+  const status = o.status || 'pending';
+  const date = o.createdAt?.toDate?.() ? o.createdAt.toDate().toLocaleDateString('en-PK') : 'N/A';
+  const codRisk = o.isCodRisk ? '<span class="cod-flag">⚠️ COD Risk</span>' : '';
+  // Full address for copy
+  const fullAddr = [o.customerName, o.customerPhone, o.address, o.city].filter(Boolean).join(' | ');
+  const addrBox = `<div class="address-box">
+    <div class="address-text">📍 ${o.address||'—'}, ${o.city||'—'}<br>👤 ${o.customerName||''} · 📞 ${o.customerPhone||''}</div>
+    <button class="copy-btn" onclick="copyAddress('${fullAddr.replace(/'/g,"\'")}')">Copy</button>
+  </div>`;
+
+  let actions = '';
+  if (showActions) {
+    if (status === 'pending') {
+      actions = `<div class="order-actions">
+        <button class="btn-accept" onclick="acceptOrder('${o.id}','${o.resellerFcmToken||''}','${o.resellerName||''}')">✅ Accept</button>
+        <button class="btn-reject" onclick="openReject('${o.id}','${o.resellerFcmToken||''}')">❌ Reject</button>
+      </div>`;
+    } else if (status === 'accepted') {
+      actions = `<div class="order-actions">
+        <button class="btn-dispatch" onclick="openDispatch('${o.id}','${o.resellerFcmToken||''}')">🚚 Dispatch</button>
+      </div>`;
+    }
+  }
+
+  const oid = o.id.slice(-6).toUpperCase();
+  // Payment info
+  const resellerPayAmt = (o.resellerPrice||0) * (o.quantity||1);
+  const isPaid = o.paymentStatus === 'paid';
+  const payLine = `<div style="display:flex;justify-content:space-between;align-items:center;background:${isPaid?'#E8F5E9':'#FFF3E0'};border-radius:8px;padding:10px 12px;margin-bottom:10px">
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-soft)">Admin کو ادائیگی (Reseller Price)</div>
+      <div style="font-size:18px;font-weight:700;color:${isPaid?'#2E7D32':'#E65100'};font-family:'Playfair Display',serif">Rs. ${Math.round(resellerPayAmt)}</div>
+      ${o.paymentMethod ? `<div style="font-size:11px;color:var(--text-soft)">طریقہ: ${o.paymentMethod}</div>` : ''}
+    </div>
+    <span class="${isPaid?'pay-badge-paid':'pay-badge-due'}">${isPaid?'✅ PAID':'⏳ DUE'}</span>
+  </div>`;
+
+  const tools = `<div class="order-tools">
+    <button class="tool-btn btn-invoice" onclick="printInvoice('${o.id}')">🧾 Invoice</button>
+    <button class="tool-btn btn-whatsapp" onclick="sendWhatsApp('${o.id}')">💬 WhatsApp</button>
+    <button class="tool-btn btn-sheet" onclick="downloadSheet('${o.id}')">📊 Sheet</button>
+    <button class="tool-btn btn-shipping" onclick="printShipping('${o.id}')" style="flex:1;min-width:100%;margin-top:2px">🏷️ Shipping Label Print</button>
+  </div>`;
+
+  return `<div class="order-card ${status}" id="ocard-${o.id}">
+    <div class="order-header">
+      <div>
+        <span class="order-id">#${oid} · ${date}</span>
+        ${codRisk}
+      </div>
+      <span class="status-badge ${status}">${status}</span>
+    </div>
+    <div class="order-customer">${o.customerName||'N/A'}</div>
+    <div class="order-meta">
+      <span>👤 ${o.resellerName||'—'}</span>
+      <span>📦 ${o.productName||'—'} ×${o.quantity||1}</span>
+      <span style="font-weight:700;color:var(--brown)">Rs.${Math.round(o.totalAmount||0)}</span>
+    </div>
+    ${addrBox}
+    ${payLine}
+    ${o.trackingNumber ? `<div style="font-size:12px;color:var(--dispatched);margin-bottom:8px">🚚 ${o.courierCompany} · ${o.trackingNumber}</div>` : ''}
+    ${actions}
+    ${tools}
+  </div>`;
+}
+
+async function acceptOrder(id, token, resellerName) {
+  if (!confirm('Accept this order?')) return;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'accepted',
+      updatedAt: firebase.firestore.Timestamp.now()
+    });
+    // Save notification for reseller
+    await db.collection('notifications').add({
+      userId: token,
+      title: '✅ Order Accepted!',
+      body: `Your order has been accepted by admin. We will dispatch soon!`,
+      type: 'order_accepted',
+      orderId: id,
+      isRead: false,
+      createdAt: firebase.firestore.Timestamp.now()
+    });
+    showToast('Order accepted! Reseller notified ✅', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function openReject(orderId, fcmToken) {
+  document.getElementById('rejectOrderId').value = orderId;
+  document.getElementById('rejectFcmToken').value = fcmToken;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectModal').classList.add('open');
+}
+
+async function confirmReject() {
+  const id = document.getElementById('rejectOrderId').value;
+  const token = document.getElementById('rejectFcmToken').value;
+  const reason = document.getElementById('rejectReason').value;
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'rejected', updatedAt: firebase.firestore.Timestamp.now()
+    });
+    await db.collection('notifications').add({
+      userId: token,
+      title: '❌ Order Rejected',
+      body: reason ? `Reason: ${reason}` : 'Your order was rejected by admin.',
+      type: 'order_rejected', orderId: id,
+      isRead: false, createdAt: firebase.firestore.Timestamp.now()
+    });
+    document.getElementById('rejectModal').classList.remove('open');
+    showToast('Order rejected', 'error');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ═══ DISPATCH ═══
+function setDispatchFilter(f, el) {
+  dispatchFilter = f;
+  document.querySelectorAll('#pageDispatch .filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDispatch();
+}
+
+function renderDispatch() {
+  const orders = allOrders.filter(o => o.status === dispatchFilter);
+  const list = document.getElementById('dispatchList');
+  const empty = document.getElementById('dispatchEmpty');
+  if (orders.length === 0) {
+    list.innerHTML = ''; empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = orders.map(o => orderCardHTML(o, true)).join('');
+  }
+}
+
+function openDispatch(orderId, fcmToken) {
+  document.getElementById('dispatchOrderId').value = orderId;
+  document.getElementById('dispatchFcmToken').value = fcmToken;
+  document.getElementById('courierSelect').value = '';
+  document.getElementById('trackingNumberInput').value = '';
+  document.getElementById('dispatchModal').classList.add('open');
+}
+
+async function confirmDispatch() {
+  const id = document.getElementById('dispatchOrderId').value;
+  const token = document.getElementById('dispatchFcmToken').value;
+  const courier = document.getElementById('courierSelect').value;
+  const tracking = document.getElementById('trackingNumberInput').value.trim();
+  if (!courier) { showToast('Courier company select کریں', 'error'); return; }
+  if (!tracking) { showToast('Tracking number درج کریں', 'error'); return; }
+  try {
+    await db.collection('orders').doc(id).update({
+      status: 'dispatched', courierCompany: courier,
+      trackingNumber: tracking, updatedAt: firebase.firestore.Timestamp.now()
+    });
+    await db.collection('notifications').add({
+      userId: token,
+      title: '🚚 Order Dispatched!',
+      body: `Courier: ${courier} | Tracking: ${tracking}`,
+      type: 'order_dispatched', orderId: id,
+      isRead: false, createdAt: firebase.firestore.Timestamp.now()
+    });
+    closeModal();
+    showToast('Dispatched! Reseller notified 🚚', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function closeModal() {
+  document.getElementById('dispatchModal').classList.remove('open');
+}
+
+// ═══ TRACKING ═══
+function renderDispatchedForTracking() {
+  const orders = allOrders.filter(o => o.status === 'dispatched');
+  const container = document.getElementById('dispatchedForTracking');
+  if (!container) return;
+  container.innerHTML = orders.length === 0 ?
+    '<p style="color:var(--text-soft);font-size:13px">No dispatched orders yet</p>' :
+    orders.map(o => `<div style="background:var(--white);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;box-shadow:var(--shadow);cursor:pointer" onclick="document.getElementById('trackingInput').value='${o.trackingNumber}';trackOrder()">
+      <div style="font-weight:600;font-size:14px">${o.customerName} · ${o.city}</div>
+      <div style="font-size:12px;color:var(--dispatched);margin-top:3px">🚚 ${o.courierCompany} | ${o.trackingNumber}</div>
+    </div>`).join('');
+}
+
+function trackOrder() {
+  const num = document.getElementById('trackingInput').value.trim();
+  if (!num) { showToast('Tracking number درج کریں', 'error'); return; }
+  const order = allOrders.find(o => o.trackingNumber === num);
+  const container = document.getElementById('trackingResult');
+  const courier = order?.courierCompany || 'TCS';
+  const statuses = ['Booked', 'In Transit', 'Arrived City', 'Out for Delivery', 'Delivered'];
+  const currentIdx = order?.status === 'delivered' ? 4 :
+    order?.status === 'dispatched' ? Math.floor(Math.random()*3)+1 : 0;
+  container.innerHTML = `
+    <div style="background:var(--cream2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px">
+      <div style="font-weight:700;color:var(--brown)">${courier} · ${num}</div>
+      ${order ? `<div style="font-size:12px;color:var(--text-soft);margin-top:4px">Customer: ${order.customerName} · ${order.city}</div>` : ''}
+    </div>
+    <div class="timeline">
+      ${statuses.map((s,i) => `<div class="timeline-item ${i < currentIdx ? 'done' : i === currentIdx ? 'current' : ''}">
+        <div class="timeline-dot"></div>
+        <div class="timeline-status">${s}</div>
+        <div class="timeline-time">${i <= currentIdx ? new Date(Date.now() - (currentIdx-i)*3600000*8).toLocaleString('en-PK') : 'Pending'}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ═══ RESELLERS ═══
+function filterResellers() {
+  const q = document.getElementById('resellerSearch').value.toLowerCase();
+  renderResellers(q);
+}
+
+function renderResellers(query = '') {
+  const list = document.getElementById('resellerList');
+  const empty = document.getElementById('resellerEmpty');
+  let resellers = allResellers;
+  if (query) resellers = resellers.filter(r =>
+    (r.name||'').toLowerCase().includes(query) ||
+    (r.phone||'').toLowerCase().includes(query) ||
+    (r.city||'').toLowerCase().includes(query)
+  );
+  if (resellers.length === 0) {
+    list.innerHTML = ''; empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = resellers.map((r, i) => {
+      const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+      const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+      const resellerOrders = allOrders.filter(o => o.resellerId === r.id);
+      const resellerDue = resellerOrders.filter(o => ['accepted','dispatched'].includes(o.status) && o.paymentStatus !== 'paid')
+        .reduce((s,o) => s + ((o.resellerPrice||0)*(o.quantity||1)), 0);
+      return `<div class="reseller-card">
+        <div class="reseller-avatar">${(r.name||'R')[0].toUpperCase()}</div>
+        <div class="reseller-info">
+          <div class="reseller-name">${r.name||'Reseller'}</div>
+          <div class="reseller-phone">📞 ${r.phone||'—'} · 📍 ${r.city||'—'}</div>
+          <div class="reseller-stats">
+            <div class="reseller-stat"><strong>${r.totalOrders||0}</strong>Orders</div>
+            <div class="reseller-stat"><strong>Rs. ${formatMoney(r.totalProfit||0)}</strong>Profit</div>
+            ${resellerDue > 0 ? `<div class="reseller-stat"><strong style="color:#E65100">Rs.${formatMoney(resellerDue)}</strong>Due</div>` : '<div class="reseller-stat"><strong style="color:#2E7D32">✅</strong>Paid</div>'}
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            ${r.isActive !== false ? 
+              `<button class="btn-remove-reseller" onclick="removeReseller('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">🗑️ Remove</button>` :
+              `<span style="font-size:10px;font-weight:700;padding:4px 10px;background:#FFEBEE;color:#C62828;border-radius:6px">❌ REMOVED</span>
+               <button style="background:#E8F5E9;color:#2E7D32;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer" onclick="reactivateReseller('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">✅ Activate</button>`
+            }
+          </div>
+        </div>
+        <div class="rank-badge ${rankClass}">${rankIcon}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ═══ PRODUCTS ═══
+function filterProducts() {
+  const q = document.getElementById('productSearch').value.toLowerCase();
+  renderProducts(q);
+}
+
+function renderProducts(query = '') {
+  const list = document.getElementById('productList');
+  let products = allProducts;
+  if (query) products = products.filter(p =>
+    (p.name||'').toLowerCase().includes(query) ||
+    (p.category||'').toLowerCase().includes(query)
+  );
+  if (products.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">No Products Yet</div><div class="empty-sub">Click + to add products</div></div>`;
+    return;
+  }
+  list.innerHTML = products.map(p => `<div class="product-card">
+    <div class="product-img">${p.imageUrl ? `<img src="${p.imageUrl}" style="width:70px;height:70px;object-fit:cover;border-radius:12px" onerror="this.parentNode.textContent='📦'">` : '📦'}</div>
+    <div class="product-info">
+      <div class="product-name">${p.name||'Product'}</div>
+      <div style="font-size:11px;color:var(--text-soft);margin-bottom:6px">${p.category||''}</div>
+      <div class="product-prices">
+        <span class="price-retail">Retail: Rs.${formatMoney(p.retailPrice||0)}</span>
+        <span class="price-reseller">Rs.${formatMoney(p.resellerPrice||0)}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="profit-badge">+Rs.${formatMoney((p.retailPrice||0)-(p.resellerPrice||0))} Profit</span>
+        <span class="stock-badge ${(p.stockQuantity||0) > 0 ? 'in-stock' : 'out-stock'}">${(p.stockQuantity||0) > 0 ? `Stock: ${p.stockQuantity}` : 'Out of Stock'}</span>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+function openAddProduct() {
+  document.getElementById('productModal').classList.add('open');
+}
+function closeProductModal() {
+  document.getElementById('productModal').classList.remove('open');
+}
+
+async function saveProduct() {
+  const name = document.getElementById('pName').value.trim();
+  const desc = document.getElementById('pDesc').value.trim();
+  const cat = document.getElementById('pCategory').value;
+  const retail = parseFloat(document.getElementById('pRetail').value);
+  const reseller = parseFloat(document.getElementById('pReseller').value);
+  const stock = parseInt(document.getElementById('pStock').value) || 0;
+  const image = document.getElementById('pImage').value.trim();
+  if (!name || !retail || !reseller) { showToast('Name اور prices درج کریں', 'error'); return; }
+  if (reseller >= retail) { showToast('Reseller price retail سے کم ہونی چاہیے', 'error'); return; }
+  try {
+    await db.collection('products').add({
+      name, description: desc, category: cat,
+      retailPrice: retail, resellerPrice: reseller,
+      stockQuantity: stock, imageUrl: image,
+      isActive: true, createdAt: firebase.firestore.Timestamp.now()
+    });
+    closeProductModal();
+    showToast('Product added! ✅', 'success');
+    document.getElementById('pName').value = '';
+    document.getElementById('pDesc').value = '';
+    document.getElementById('pRetail').value = '';
+    document.getElementById('pReseller').value = '';
+    document.getElementById('pStock').value = '';
+    document.getElementById('pImage').value = '';
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ═══ NAVIGATION ═══
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).classList.add('active');
+  document.getElementById('nav-' + page)?.classList.add('active');
+  document.getElementById('topBarSub').textContent =
+    {dashboard:'Dashboard',orders:'All Orders',dispatch:'Dispatch Center',tracking:'Live Tracking',resellers:'Resellers',products:'Products'}[page];
+  document.getElementById('fabBtn').style.display = page === 'products' ? 'flex' : 'none';
+  document.getElementById('addResellerFab').style.display = page === 'resellers' ? 'flex' : 'none';
+  currentPage = page;
+  if (page === 'dashboard') loadDashboard();
+}
+
+// ═══ HELPERS ═══
+function formatMoney(n) {
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return Math.round(n).toString();
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function toggleDarkMode() {
+  document.documentElement.style.colorScheme = 
+    document.documentElement.style.colorScheme === 'dark' ? 'light' : 'dark';
+}
+
+
+
+// ═══ SHIPPING LABEL PRINT ═══
+function printShipping(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Shipping Label</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .label {
+      border: 3px solid #000; border-radius: 12px;
+      padding: 20px; max-width: 380px; margin: 0 auto;
+    }
+    .label-header {
+      text-align: center; border-bottom: 2px solid #000;
+      padding-bottom: 12px; margin-bottom: 14px;
+    }
+    .label-header h2 { font-size: 20px; color: #4E342E; }
+    .label-header p { font-size: 11px; color: #888; }
+    .section { margin-bottom: 12px; }
+    .section-title { font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+    .section-value { font-size: 16px; font-weight: 700; color: #000; line-height: 1.4; }
+    .section-sub { font-size: 13px; color: #333; }
+    .barcode-area { text-align: center; background: #f5f5f5;
+      border-radius: 8px; padding: 12px; margin: 14px 0; }
+    .order-id { font-size: 24px; font-weight: 900; letter-spacing: 3px; }
+    .cod-box { border: 2px solid #F4B400; border-radius: 8px;
+      padding: 10px; text-align: center; margin-top: 12px; }
+    .cod-text { font-size: 18px; font-weight: 700; color: #E65100; }
+    .cod-amt { font-size: 26px; font-weight: 900; color: #4E342E; }
+    .footer { text-align: center; font-size: 10px; color: #aaa; margin-top: 14px; }
+    @media print { button { display: none; } }
+  </style></head><body>
+  <div class="label">
+    <div class="label-header">
+      <h2>🏪 Desi Products</h2>
+      <p>Al Tohoheed Foods · Rahim Yar Khan</p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📦 TO (Deliver To)</div>
+      <div class="section-value">${o.customerName||'—'}</div>
+      <div class="section-sub">📞 ${o.customerPhone||'—'}</div>
+      <div class="section-sub">📍 ${o.address||'—'}</div>
+      <div class="section-sub" style="font-weight:700;font-size:16px">🏙️ ${o.city||'—'}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📤 FROM (Sender)</div>
+      <div class="section-value">Al Tohoheed Foods</div>
+      <div class="section-sub">Rahim Yar Khan, Punjab</div>
+    </div>
+
+    <div class="barcode-area">
+      <div style="font-size:10px;color:#888;margin-bottom:4px">ORDER ID</div>
+      <div class="order-id">#${o.id.slice(-6).toUpperCase()}</div>
+      ${o.trackingNumber ? `<div style="margin-top:6px;font-size:12px;color:#555">Tracking: ${o.trackingNumber}</div>` : ''}
+    </div>
+
+    <div class="section">
+      <div class="section-title">📦 Product</div>
+      <div class="section-value">${o.productName||'—'} × ${o.quantity||1}</div>
+    </div>
+
+    <div class="cod-box">
+      <div class="cod-text">💵 COD - Cash on Delivery</div>
+      <div class="cod-amt">Rs. ${Math.round(o.totalAmount||0)}</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">ڈیلیوری پر وصول کریں</div>
+    </div>
+
+    <div class="footer">
+      <p>${o.courierCompany ? o.courierCompany + ' Courier' : 'Courier Service'} · ${new Date().toLocaleDateString('en-PK')}</p>
+    </div>
+  </div>
+  <br>
+  <button onclick="window.print()" style="width:100%;padding:14px;background:#4E342E;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">🖨️ Print Shipping Label</button>
+  </body></html>`);
+  win.document.close();
+}
+
+// ═══ REMOVE RESELLER ═══
+async function removeReseller(resellerId, resellerName) {
+  if (!confirm(`"${resellerName}" کو remove کریں؟\nیہ ان کا account بند ہو جائے گا اور login نہیں کر سکے گا۔`)) return;
+  try {
+    await db.collection('users').doc(resellerId).update({
+      isActive: false,
+      role: 'reseller_disabled',
+      removedAt: firebase.firestore.Timestamp.now()
+    });
+    showToast(`✅ ${resellerName} کو remove کر دیا گیا`, 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function reactivateReseller(resellerId, resellerName) {
+  if (!confirm(`"${resellerName}" کو دوبارہ activate کریں؟`)) return;
+  try {
+    await db.collection('users').doc(resellerId).update({
+      isActive: true,
+      role: 'reseller',
+      removedAt: null
+    });
+    showToast(`✅ ${resellerName} کو activate کر دیا گیا`, 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ═══ COPY ADDRESS ═══
+function copyAddress(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('Address copied! ✅', 'success'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Address copied! ✅', 'success');
+  }
+}
+
+// ═══ PRINT INVOICE ═══
+function printInvoice(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  const date = o.createdAt?.toDate?.() ? o.createdAt.toDate().toLocaleDateString('en-PK') : new Date().toLocaleDateString();
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Invoice #${o.id.slice(-6).toUpperCase()}</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:400px;margin:20px auto;padding:20px;color:#333}
+    .logo{text-align:center;margin-bottom:20px}
+    .logo h2{color:#4E342E;margin:0}
+    .logo p{color:#888;font-size:12px;margin:4px 0}
+    hr{border:none;border-top:2px solid #F4B400;margin:16px 0}
+    .row{display:flex;justify-content:space-between;margin:8px 0;font-size:14px}
+    .row.bold{font-weight:700;font-size:16px}
+    .section{background:#FFF8F0;border-radius:8px;padding:12px;margin:12px 0}
+    .section h4{margin:0 0 8px;color:#4E342E;font-size:13px;text-transform:uppercase}
+    .status{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#FFF3E0;color:#E65100}
+    .footer{text-align:center;margin-top:20px;font-size:11px;color:#888}
+    @media print{button{display:none}}
+  </style></head><body>
+  <div class="logo">
+    <h2>🏪 Desi Products</h2>
+    <p>Al Tohoheed Foods</p>
+    <p>Invoice Date: ${date}</p>
+  </div>
+  <hr>
+  <div class="row"><span>Invoice #</span><strong>#${o.id.slice(-6).toUpperCase()}</strong></div>
+  <div class="row"><span>Status</span><span class="status">${(o.status||'').toUpperCase()}</span></div>
+  <div class="section">
+    <h4>Customer Details</h4>
+    <div class="row"><span>Name</span><span>${o.customerName||'—'}</span></div>
+    <div class="row"><span>Phone</span><span>${o.customerPhone||'—'}</span></div>
+    <div class="row"><span>City</span><span>${o.city||'—'}</span></div>
+    <div class="row"><span>Address</span><span style="text-align:right;max-width:60%">${o.address||'—'}</span></div>
+  </div>
+  <div class="section">
+    <h4>Order Details</h4>
+    <div class="row"><span>Product</span><span>${o.productName||'—'}</span></div>
+    <div class="row"><span>Quantity</span><span>${o.quantity||1}</span></div>
+    <div class="row"><span>Unit Price</span><span>Rs. ${Math.round(o.retailPrice||0)}</span></div>
+    <div class="row bold"><span>Total</span><span>Rs. ${Math.round(o.totalAmount||0)}</span></div>
+  </div>
+  <div class="section">
+    <h4>Reseller Info</h4>
+    <div class="row"><span>Reseller</span><span>${o.resellerName||'—'}</span></div>
+    ${o.courierCompany ? `<div class="row"><span>Courier</span><span>${o.courierCompany}</span></div>` : ''}
+    ${o.trackingNumber ? `<div class="row"><span>Tracking</span><span>${o.trackingNumber}</span></div>` : ''}
+  </div>
+  <div class="footer">
+    <p>COD - Payment on Delivery</p>
+    <p>Thank you for your order!</p>
+  </div>
+  <br><button onclick="window.print()" style="width:100%;padding:12px;background:#F4B400;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:700">🖨️ Print Invoice</button>
+  </body></html>`);
+  win.document.close();
+}
+
+// ═══ WHATSAPP BILL ═══
+function sendWhatsApp(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  const date = o.createdAt?.toDate?.() ? o.createdAt.toDate().toLocaleDateString('en-PK') : new Date().toLocaleDateString();
+  const msg = `🧾 *ORDER INVOICE*
+━━━━━━━━━━━━━━━━━
+🏪 *Desi Products - Al Tohoheed*
+━━━━━━━━━━━━━━━━━
+📋 *Order #${o.id.slice(-6).toUpperCase()}*
+📅 Date: ${date}
+📦 Status: ${(o.status||'').toUpperCase()}
+
+👤 *Customer:* ${o.customerName||'—'}
+📞 *Phone:* ${o.customerPhone||'—'}
+📍 *Address:* ${o.address||'—'}, ${o.city||'—'}
+
+🛍️ *Product:* ${o.productName||'—'}
+🔢 *Qty:* ${o.quantity||1}
+💰 *Total:* Rs. ${Math.round(o.totalAmount||0)}
+
+${o.trackingNumber ? `🚚 *Courier:* ${o.courierCompany}
+🔍 *Tracking:* ${o.trackingNumber}` : ''}
+━━━━━━━━━━━━━━━━━
+COD - ادائیگی ڈیلیوری پر
+شکریہ! 🙏`;
+
+  const phone = (o.resellerPhone||'').replace(/[^0-9]/g,'');
+  const intlPhone = phone.startsWith('0') ? '92' + phone.slice(1) : phone;
+  const url = `https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+// ═══ DOWNLOAD GOOGLE SHEET (CSV) ═══
+function downloadSheet(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) {
+    // Download ALL orders as CSV
+    downloadAllOrdersCSV();
+    return;
+  }
+  const date = o.createdAt?.toDate?.() ? o.createdAt.toDate().toLocaleDateString('en-PK') : '';
+  const headers = ['Order ID','Date','Status','Customer Name','Phone','Address','City','Product','Qty','Retail Price','Reseller Price','Total','Profit','Reseller','Courier','Tracking'];
+  const row = [
+    '#'+o.id.slice(-6).toUpperCase(), date, o.status||'',
+    o.customerName||'', o.customerPhone||'', o.address||'', o.city||'',
+    o.productName||'', o.quantity||1,
+    o.retailPrice||0, o.resellerPrice||0, o.totalAmount||0, o.profit||0,
+    o.resellerName||'', o.courierCompany||'', o.trackingNumber||''
+  ];
+  const csv = [headers, row].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `order_${o.id.slice(-6)}.csv`;
+  a.click();
+  showToast('CSV Downloaded! 📊', 'success');
+}
+
+function downloadAllOrdersCSV() {
+  const headers = ['Order ID','Date','Status','Customer Name','Phone','Address','City','Product','Qty','Total','Profit','Reseller','Courier','Tracking'];
+  const rows = allOrders.map(o => {
+    const date = o.createdAt?.toDate?.() ? o.createdAt.toDate().toLocaleDateString('en-PK') : '';
+    return ['#'+o.id.slice(-6).toUpperCase(), date, o.status||'',
+      o.customerName||'', o.customerPhone||'', o.address||'', o.city||'',
+      o.productName||'', o.quantity||1, o.totalAmount||0, o.profit||0,
+      o.resellerName||'', o.courierCompany||'', o.trackingNumber||''];
+  });
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `all_orders_${new Date().toLocaleDateString('en-PK').replace(/\//g,'-')}.csv`;
+  a.click();
+  showToast('All Orders CSV Downloaded! 📊', 'success');
+}
+
+// ═══ ADD RESELLER BY ADMIN ═══
+async function saveReseller() {
+  const name = document.getElementById('rName').value.trim();
+  const phone = document.getElementById('rPhone').value.trim();
+  const city = document.getElementById('rCity').value;
+  const pw = document.getElementById('rPassword').value;
+  if (!name||!phone||!city||!pw) { showToast('تمام fields بھریں', 'error'); return; }
+  if (pw.length < 6) { showToast('Password کم از کم 6 حروف', 'error'); return; }
+
+  // Use secondary Firebase app to create user without affecting admin session
+  const email = phone + '@desi.pk';
+  try {
+    // Create via Firebase Auth REST API
+    const apiKey = 'AIzaSyCF8jcgnhnbpRwTA1-mvEA48ZFu-lo0W2k';
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pw, returnSecureToken: true})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    await db.collection('users').doc(data.localId).set({
+      name, phone, city, email, role: 'reseller',
+      isActive: true, walletBalance: 0, totalOrders: 0,
+      totalProfit: 0, fcmToken: '',
+      createdAt: firebase.firestore.Timestamp.now()
+    });
+    document.getElementById('addResellerModal').classList.remove('open');
+    document.getElementById('rName').value = '';
+    document.getElementById('rPhone').value = '';
+    document.getElementById('rCity').value = '';
+    document.getElementById('rPassword').value = '';
+    showToast(`✅ ${name} کا account بن گیا! Phone: ${phone}`, 'success');
+  } catch(e) {
+    const msg = e.message.includes('EMAIL_EXISTS') ? 'یہ number پہلے سے registered ہے' : e.message;
+    showToast('Error: ' + msg, 'error');
+  }
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>
